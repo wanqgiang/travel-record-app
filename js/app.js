@@ -102,9 +102,26 @@ class TravelRecordApp {
             this.importData(e.target.files[0]);
         });
 
-        // 点击模态框外部关闭
-        window.addEventListener('click', (e) => {
+        // 点击模态框外部关闭（优化版）
+        document.addEventListener('click', (e) => {
+            // 检查是否点击了模态框的背景区域
             if (e.target.classList.contains('modal')) {
+                this.hideAddModal();
+                this.hideDetailModal();
+            }
+        });
+        
+        // 防止模态框内容区域的点击事件冒泡
+        document.addEventListener('click', (e) => {
+            // 如果点击的是模态框内容区域，阻止事件冒泡
+            if (e.target.closest('.modal-content')) {
+                e.stopPropagation();
+            }
+        });
+        
+        // ESC键关闭模态框
+        document.addEventListener('keydown', (e) => {
+            if (e.key === 'Escape') {
                 this.hideAddModal();
                 this.hideDetailModal();
             }
