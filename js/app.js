@@ -206,7 +206,7 @@ class TravelRecordApp {
         this.renderContent();
     }
 
-    // 渲染城市列表（优化安全性）
+    // 渲染城市列表（优化点击区域）
     renderCities(cities, provinceIndex) {
         return cities.map((city, cityIndex) => {
             const placeCount = city.places.length;
@@ -214,15 +214,17 @@ class TravelRecordApp {
             
             return `
                 <div class="city-item">
-                    <div class="city-name">
-                        <span>${this.escapeHtml(city.name)}</span>
-                        <button class="expand-btn" onclick="app.toggleCity(${provinceIndex}, ${cityIndex})">
+                    <div class="city-header" onclick="app.toggleCity(${provinceIndex}, ${cityIndex})">
+                        <div class="city-name">
+                            <span>${this.escapeHtml(city.name)}</span>
+                            <div class="city-info">
+                                <small>访问时间: ${visitDate}</small>
+                                <small>景点数量: ${placeCount}</small>
+                            </div>
+                        </div>
+                        <div class="expand-btn">
                             <i class="fas fa-chevron-down"></i>
-                        </button>
-                    </div>
-                    <div class="city-info">
-                        <small>访问时间: ${visitDate}</small>
-                        <small>景点数量: ${placeCount}</small>
+                        </div>
                     </div>
                     <div class="places-list" id="places-${provinceIndex}-${cityIndex}" style="display: none;">
                         ${city.places.map((place, placeIndex) => `
@@ -259,32 +261,40 @@ class TravelRecordApp {
         if (placesList.style.display === 'none') {
             placesList.style.display = 'block';
             expandBtn.className = 'fas fa-chevron-up';
+            // 添加展开动画
+            placesList.style.maxHeight = 'none';
         } else {
             placesList.style.display = 'none';
             expandBtn.className = 'fas fa-chevron-down';
+            placesList.style.maxHeight = '0';
         }
     }
 
     // 显示景点详情
     showPlaceDetail(provinceIndex, cityIndex, placeIndex) {
-        const province = this.currentData.provinces[provinceIndex];
-        const city = province.cities[cityIndex];
+        // 根据当前标签页获取正确的数据
+        const currentRegions = this.getCurrentRegions();
+        const region = currentRegions[provinceIndex];
+        const city = region.cities[cityIndex];
         const place = city.places[placeIndex];
         
-        this.currentDetailRecord = { provinceIndex, cityIndex, placeIndex, province, city, place };
+        this.currentDetailRecord = { provinceIndex, cityIndex, placeIndex, province: region, city, place };
         
         const detailBody = document.getElementById('detailBody');
         const detailTitle = document.getElementById('detailTitle');
         
         detailTitle.textContent = `${place} - ${city.name}`;
         
+        // 根据当前标签页显示不同的标签
+        const regionLabel = this.currentTab === 'foreign' ? '国家' : '省份';
+        
         detailBody.innerHTML = `
             <div class="detail-content">
                 <div class="detail-section">
                     <h4><i class="fas fa-map-marker-alt"></i> 位置信息</h4>
-                    <p><strong>省份:</strong> ${province.name}</p>
-                    <p><strong>城市:</strong> ${city.name}</p>
-                    <p><strong>景点:</strong> ${place}</p>
+                    <p><strong>${regionLabel}:</strong> ${this.escapeHtml(region.name)}</p>
+                    <p><strong>城市:</strong> ${this.escapeHtml(city.name)}</p>
+                    <p><strong>景点:</strong> ${this.escapeHtml(place)}</p>
                 </div>
                 
                 <div class="detail-section">
@@ -294,14 +304,14 @@ class TravelRecordApp {
                 
                 <div class="detail-section">
                     <h4><i class="fas fa-sticky-note"></i> 备注</h4>
-                    <p>${city.notes || '暂无备注'}</p>
+                    <p>${this.escapeHtml(city.notes || '暂无备注')}</p>
                 </div>
                 
                 <div class="detail-section">
                     <h4><i class="fas fa-list"></i> 同城其他景点</h4>
                     <div class="other-places">
                         ${city.places.filter(p => p !== place).map(p => 
-                            `<span class="place-tag">${p}</span>`
+                            `<span class="place-tag">${this.escapeHtml(p)}</span>`
                         ).join('')}
                     </div>
                 </div>
