@@ -54,9 +54,8 @@ jobs:
         echo "🎉 所有检查通过！"
         
     - name: 部署到GitHub Pages
-      uses: peaceiris/actions-gh-pages@v3
       if: github.ref == 'refs/heads/main'
-      with:
-        github_token: ${{ secrets.GITHUB_TOKEN }}
-        publish_dir: ./
-        exclude_assets: '.github,node_modules,*.md,deploy.sh'
+      run: |
+        echo "✅ 代码已推送到main分支"
+        echo "✅ GitHub Pages会自动部署"
+        echo "🌐 网站地址: https://wanqgiang.github.io/travel-record-app"
