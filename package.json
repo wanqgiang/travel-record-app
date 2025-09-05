@@ -1,0 +1,42 @@
+{
+  "name": "travel-record-app",
+  "version": "2.0.0",
+  "description": "一个优雅的旅行记录管理应用，帮助您记录和管理旅行足迹",
+  "main": "index.html",
+  "scripts": {
+    "start": "npx live-server --port=3000",
+    "build": "echo '纯前端项目，无需构建'",
+    "test": "echo '暂无测试用例'"
+  },
+  "keywords": [
+    "travel",
+    "record",
+    "travel-log",
+    "javascript",
+    "web-app",
+    "旅行记录",
+    "旅游",
+    "足迹"
+  ],
+  "author": "Travel Record App Team",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/your-username/travel-record-app.git"
+  },
+  "bugs": {
+    "url": "https://github.com/your-username/travel-record-app/issues"
+  },
+  "homepage": "https://your-username.github.io/travel-record-app",
+  "devDependencies": {
+    "live-server": "^1.2.2"
+  },
+  "browserslist": [
+    "> 1%",
+    "last 2 versions",
+    "not dead"
+  ],
+  "engines": {
+    "node": ">=14.0.0"
+  }
+}
