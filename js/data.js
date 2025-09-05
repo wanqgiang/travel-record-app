@@ -903,7 +903,52 @@ const regionLists = {
     ]
 };
 
+// 获取过滤后的旅行数据（根据环境决定是否包含测试数据）
+function getFilteredTravelData() {
+    const isLocal = typeof AppConfig !== 'undefined' && 
+                   AppConfig.DEVELOPMENT && 
+                   AppConfig.DEVELOPMENT.IS_LOCAL;
+    
+    if (isLocal) {
+        // 本地开发环境，显示所有数据包括测试数据
+        return travelData;
+    } else {
+        // 生产环境，过滤掉测试数据
+        return {
+            domestic: {
+                provinces: travelData.domestic.provinces.filter(province => 
+                    province.name !== '测试省'
+                )
+            },
+            foreign: travelData.foreign // 国外数据不变
+        };
+    }
+}
+
+// 获取过滤后的地区列表
+function getFilteredRegionLists() {
+    const isLocal = typeof AppConfig !== 'undefined' && 
+                   AppConfig.DEVELOPMENT && 
+                   AppConfig.DEVELOPMENT.IS_LOCAL;
+    
+    if (isLocal) {
+        // 本地开发环境，显示所有地区包括测试省
+        return regionLists;
+    } else {
+        // 生产环境，过滤掉测试省
+        return {
+            domestic: regionLists.domestic.filter(region => region !== '测试省'),
+            foreign: regionLists.foreign // 国外列表不变
+        };
+    }
+}
+
 // 导出数据
 if (typeof module !== 'undefined' && module.exports) {
-    module.exports = { travelData, regionLists };
+    module.exports = { 
+        travelData, 
+        regionLists, 
+        getFilteredTravelData, 
+        getFilteredRegionLists 
+    };
 }

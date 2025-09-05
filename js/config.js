@@ -4,6 +4,15 @@ const AppConfig = {
     APP_NAME: '我的旅行战绩',
     VERSION: '2.0.0',
     
+    // 开发环境配置
+    DEVELOPMENT: {
+        // 检测是否为本地开发环境
+        IS_LOCAL: window.location.hostname === 'localhost' || 
+                 window.location.hostname === '127.0.0.1' || 
+                 window.location.hostname === '',
+        SHOW_TEST_DATA: true // 本地开发时显示测试数据
+    },
+    
     // 存储配置
     STORAGE_KEYS: {
         TRAVEL_DATA: 'travelRecordData',

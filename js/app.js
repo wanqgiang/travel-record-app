@@ -1,7 +1,8 @@
 // 旅游记录应用主文件
 class TravelRecordApp {
     constructor() {
-        this.currentData = Utils.deepClone(travelData); // 使用工具函数深拷贝
+        // 使用过滤后的数据（根据环境决定是否包含测试数据）
+        this.currentData = Utils.deepClone(getFilteredTravelData());
         this.filteredData = [];
         this.currentDetailRecord = null;
         this.searchTimeout = null;
@@ -12,6 +13,7 @@ class TravelRecordApp {
 
     init() {
         this.bindEvents();
+        this.setupEnvironmentIndicator();
         this.renderContent();
         this.updateStats();
         this.populateRegionSelect();
@@ -353,7 +355,8 @@ class TravelRecordApp {
     populateRegionSelect() {
         const select = document.getElementById('provinceSelect');
         const isDomestic = this.currentTab !== 'foreign';
-        const regionList = isDomestic ? regionLists.domestic : regionLists.foreign;
+        const filteredRegionLists = getFilteredRegionLists();
+        const regionList = isDomestic ? filteredRegionLists.domestic : filteredRegionLists.foreign;
         const placeholder = isDomestic ? '请选择省份' : '请选择国家';
         
         select.innerHTML = `<option value="">${placeholder}</option>` + 
@@ -389,7 +392,8 @@ class TravelRecordApp {
         }
 
         // 确定是国内还是国外
-        const isDomestic = regionLists.domestic.includes(province);
+        const filteredRegionLists = getFilteredRegionLists();
+        const isDomestic = filteredRegionLists.domestic.includes(province);
         const targetData = isDomestic ? this.currentData.domestic : this.currentData.foreign;
         const targetKey = isDomestic ? 'provinces' : 'countries';
         
@@ -757,6 +761,24 @@ class TravelRecordApp {
         // 关闭详情模态框，打开编辑模态框
         this.hideDetailModal();
         this.showAddModal();
+    }
+    
+    // 设置环境指示器
+    setupEnvironmentIndicator() {
+        const indicator = document.getElementById('envIndicator');
+        if (!indicator) return;
+        
+        const isLocal = AppConfig.DEVELOPMENT && AppConfig.DEVELOPMENT.IS_LOCAL;
+        
+        if (isLocal) {
+            indicator.textContent = '开发环境';
+            indicator.className = 'env-indicator local';
+            indicator.title = '本地开发环境，显示测试数据';
+        } else {
+            indicator.textContent = '线上版本';
+            indicator.className = 'env-indicator production';
+            indicator.title = '生产环境，不显示测试数据';
+        }
     }
 }
 

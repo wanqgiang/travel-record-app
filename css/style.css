@@ -41,6 +41,28 @@ body {
     color: #ffd700;
 }
 
+.env-indicator {
+    display: inline-block;
+    font-size: 12px;
+    padding: 2px 8px;
+    border-radius: 12px;
+    margin-left: 10px;
+    font-weight: normal;
+    vertical-align: middle;
+}
+
+.env-indicator.local {
+    background: rgba(255, 193, 7, 0.2);
+    color: #ffc107;
+    border: 1px solid rgba(255, 193, 7, 0.3);
+}
+
+.env-indicator.production {
+    background: rgba(40, 167, 69, 0.2);
+    color: #28a745;
+    border: 1px solid rgba(40, 167, 69, 0.3);
+}
+
 .add-btn {
     background: rgba(255,255,255,0.2);
     border: 2px solid rgba(255,255,255,0.3);
