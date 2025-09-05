@@ -5,15 +5,16 @@ class TravelRecordApp {
         this.filteredData = [];
         this.currentDetailRecord = null;
         this.searchTimeout = null;
+        this.currentTab = 'domestic'; // 当前标签页：domestic, foreign, all
         this.preferences = Utils.storage.get(AppConfig.STORAGE_KEYS.USER_PREFERENCES, AppConfig.DEFAULT_PREFERENCES);
         this.init();
     }
 
     init() {
         this.bindEvents();
-        this.renderProvinces();
+        this.renderContent();
         this.updateStats();
-        this.populateProvinceSelect();
+        this.populateRegionSelect();
         this.setDefaultDate();
     }
 
@@ -71,7 +72,18 @@ class TravelRecordApp {
             this.hideDetailModal();
         });
         
+        // 标签页切换
+        document.querySelectorAll('.tab-btn').forEach(btn => {
+            btn.addEventListener('click', (e) => {
+                this.switchTab(e.target.dataset.tab);
+            });
+        });
+        
         // 新增功能按钮
+        document.getElementById('regionFilterBtn').addEventListener('click', () => {
+            this.showRegionFilter();
+        });
+        
         document.getElementById('sortBtn').addEventListener('click', () => {
             this.showSortOptions();
         });
@@ -97,16 +109,58 @@ class TravelRecordApp {
         });
     }
 
-    // 渲染省份列表（优化性能）
-    renderProvinces() {
+    // 根据当前标签页获取对应数据
+    getCurrentRegions() {
+        switch (this.currentTab) {
+            case 'domestic':
+                return this.currentData.domestic.provinces;
+            case 'foreign':
+                return this.currentData.foreign.countries;
+            case 'all':
+                return [
+                    ...this.currentData.domestic.provinces,
+                    ...this.currentData.foreign.countries
+                ];
+            default:
+                return this.currentData.domestic.provinces;
+        }
+    }
+    
+    // 标签页切换
+    switchTab(tabName) {
+        // 更新按钮状态
+        document.querySelectorAll('.tab-btn').forEach(btn => {
+            btn.classList.remove('active');
+        });
+        document.querySelector(`[data-tab="${tabName}"]`).classList.add('active');
+        
+        // 更新当前标签
+        this.currentTab = tabName;
+        
+        // 清除搜索
+        document.getElementById('searchInput').value = '';
+        this.filteredData = [];
+        this.toggleClearButton('');
+        
+        // 重新渲染内容
+        this.renderContent();
+        this.updateStats();
+    }
+    
+    // 渲染内容（统一入口）
+    renderContent() {
         const container = document.getElementById('provincesContainer');
-        const dataToRender = this.filteredData.length > 0 ? this.filteredData : this.currentData.provinces;
+        const dataToRender = this.filteredData.length > 0 ? this.filteredData : this.getCurrentRegions();
         
         if (dataToRender.length === 0) {
+            const emptyMessage = this.currentTab === 'foreign' ? 
+                '没有国外旅行记录' : 
+                this.currentTab === 'domestic' ? '没有国内旅行记录' : '没有找到相关记录';
+            
             container.innerHTML = `
                 <div class="empty-state">
                     <i class="fas fa-search"></i>
-                    <h3>没有找到相关记录</h3>
+                    <h3>${emptyMessage}</h3>
                     <p>尝试调整搜索条件或添加新的旅行记录</p>
                 </div>
             `;
@@ -116,25 +170,28 @@ class TravelRecordApp {
         // 使用DocumentFragment提高性能
         const fragment = document.createDocumentFragment();
         
-        dataToRender.forEach((province, index) => {
-            const cityCount = province.cities.length;
-            const totalPlaces = province.cities.reduce((sum, city) => sum + city.places.length, 0);
+        dataToRender.forEach((region, index) => {
+            const cityCount = region.cities.length;
+            const totalPlaces = region.cities.reduce((sum, city) => sum + city.places.length, 0);
             
-            const provinceDiv = document.createElement('div');
-            provinceDiv.className = 'province-card';
-            provinceDiv.setAttribute('data-province-index', index);
+            const regionDiv = document.createElement('div');
+            regionDiv.className = 'province-card';
+            regionDiv.setAttribute('data-province-index', index);
             
-            provinceDiv.innerHTML = `
+            const regionLabel = this.currentTab === 'foreign' || 
+                (this.currentTab === 'all' && !this.currentData.domestic.provinces.includes(region)) ? '城' : '城';
+            
+            regionDiv.innerHTML = `
                 <div class="province-header" onclick="app.toggleProvince(${index})">
-                    <span class="province-name">${this.escapeHtml(province.name)}</span>
-                    <span class="province-count">${cityCount}城 ${totalPlaces}景</span>
+                    <span class="province-name">${this.escapeHtml(region.name)}</span>
+                    <span class="province-count">${cityCount}${regionLabel} ${totalPlaces}景</span>
                 </div>
                 <div class="province-content" id="province-${index}">
-                    ${this.renderCities(province.cities, index)}
+                    ${this.renderCities(region.cities, index)}
                 </div>
             `;
             
-            fragment.appendChild(provinceDiv);
+            fragment.appendChild(regionDiv);
         });
         
         container.innerHTML = '';
@@ -142,6 +199,11 @@ class TravelRecordApp {
 
         // 添加城市展开/收起事件
         this.bindCityEvents();
+    }
+    
+    // 兼容性方法（保持旧代码正常工作）
+    renderProvinces() {
+        this.renderContent();
     }
 
     // 渲染城市列表（优化安全性）
@@ -251,6 +313,8 @@ class TravelRecordApp {
 
     // 显示添加记录模态框
     showAddModal() {
+        // 更新地区选择器以匹配当前标签页
+        this.populateRegionSelect();
         document.getElementById('addModal').style.display = 'block';
         document.body.style.overflow = 'hidden';
     }
@@ -275,11 +339,15 @@ class TravelRecordApp {
         this.currentDetailRecord = null;
     }
 
-    // 填充省份选择器
-    populateProvinceSelect() {
+    // 填充地区选择器（省份或国家）
+    populateRegionSelect() {
         const select = document.getElementById('provinceSelect');
-        select.innerHTML = '<option value="">请选择省份</option>' + 
-            provinceList.map(province => `<option value="${province}">${province}</option>`).join('');
+        const isDomestic = this.currentTab !== 'foreign';
+        const regionList = isDomestic ? regionLists.domestic : regionLists.foreign;
+        const placeholder = isDomestic ? '请选择省份' : '请选择国家';
+        
+        select.innerHTML = `<option value="">${placeholder}</option>` + 
+            regionList.map(region => `<option value="${region}">${region}</option>`).join('');
     }
 
     // 设置默认日期
@@ -310,24 +378,29 @@ class TravelRecordApp {
             return;
         }
 
-        // 检查省份是否已存在
-        let provinceIndex = this.currentData.provinces.findIndex(p => p.name === province);
+        // 确定是国内还是国外
+        const isDomestic = regionLists.domestic.includes(province);
+        const targetData = isDomestic ? this.currentData.domestic : this.currentData.foreign;
+        const targetKey = isDomestic ? 'provinces' : 'countries';
         
-        if (provinceIndex === -1) {
-            // 创建新省份
-            this.currentData.provinces.push({
+        // 检查地区是否已存在
+        let regionIndex = targetData[targetKey].findIndex(r => r.name === province);
+        
+        if (regionIndex === -1) {
+            // 创建新地区
+            targetData[targetKey].push({
                 name: province,
                 cities: []
             });
-            provinceIndex = this.currentData.provinces.length - 1;
+            regionIndex = targetData[targetKey].length - 1;
         }
 
         // 检查城市是否已存在
-        const cityIndex = this.currentData.provinces[provinceIndex].cities.findIndex(c => c.name === city);
+        const cityIndex = targetData[targetKey][regionIndex].cities.findIndex(c => c.name === city);
         
         if (cityIndex === -1) {
             // 创建新城市
-            this.currentData.provinces[provinceIndex].cities.push({
+            targetData[targetKey][regionIndex].cities.push({
                 name: city,
                 places: places.split(',').map(p => p.trim()).filter(p => p),
                 visitDate: visitDate,
@@ -335,7 +408,7 @@ class TravelRecordApp {
             });
         } else {
             // 更新现有城市
-            const existingCity = this.currentData.provinces[provinceIndex].cities[cityIndex];
+            const existingCity = targetData[targetKey][regionIndex].cities[cityIndex];
             existingCity.places = [...new Set([...existingCity.places, ...places.split(',').map(p => p.trim()).filter(p => p)])];
             if (visitDate) existingCity.visitDate = visitDate;
             if (notes) existingCity.notes = notes;
@@ -345,7 +418,7 @@ class TravelRecordApp {
         this.saveToLocalStorage();
         
         // 重新渲染
-        this.renderProvinces();
+        this.renderContent();
         this.updateStats();
         
         // 关闭模态框并显示成功消息
@@ -377,7 +450,7 @@ class TravelRecordApp {
             this.saveToLocalStorage();
             
             // 重新渲染
-            this.renderProvinces();
+            this.renderContent();
             this.updateStats();
             
             // 关闭模态框并显示成功消息
@@ -403,52 +476,60 @@ class TravelRecordApp {
     performSearch(query) {
         if (!query.trim()) {
             this.filteredData = [];
-            this.renderProvinces();
+            this.renderContent();
             return;
         }
 
         const searchTerm = query.toLowerCase();
-        this.filteredData = this.currentData.provinces.map(province => {
-            // 搜索省份名称
-            const provinceMatches = province.name.toLowerCase().includes(searchTerm);
+        const currentRegions = this.getCurrentRegions();
+        
+        this.filteredData = currentRegions.map(region => {
+            // 搜索地区名称（省份或国家）
+            const regionMatches = region.name.toLowerCase().includes(searchTerm);
             
             // 搜索城市和景点
-            const matchingCities = province.cities.filter(city => 
+            const matchingCities = region.cities.filter(city => 
                 city.name.toLowerCase().includes(searchTerm) ||
                 city.places.some(place => place.toLowerCase().includes(searchTerm)) ||
                 (city.notes && city.notes.toLowerCase().includes(searchTerm))
             );
             
-            // 如果省份匹配，返回所有城市；否则只返回匹配的城市
-            if (provinceMatches || matchingCities.length > 0) {
+            // 如果地区匹配，返回所有城市；否则只返回匹配的城市
+            if (regionMatches || matchingCities.length > 0) {
                 return {
-                    ...province,
-                    cities: provinceMatches ? province.cities : matchingCities
+                    ...region,
+                    cities: regionMatches ? region.cities : matchingCities
                 };
             }
             
             return null;
         }).filter(Boolean);
 
-        this.renderProvinces();
+        this.renderContent();
     }
 
     // 更新统计信息
     updateStats() {
-        const totalProvinces = this.currentData.provinces.length;
-        const totalCities = this.currentData.provinces.reduce((sum, province) => sum + province.cities.length, 0);
-        const totalPlaces = this.currentData.provinces.reduce((sum, province) => 
-            sum + province.cities.reduce((citySum, city) => citySum + city.places.length, 0), 0
+        const currentRegions = this.getCurrentRegions();
+        const totalRegions = currentRegions.length;
+        const totalCities = currentRegions.reduce((sum, region) => sum + region.cities.length, 0);
+        const totalPlaces = currentRegions.reduce((sum, region) => 
+            sum + region.cities.reduce((citySum, city) => citySum + city.places.length, 0), 0
         );
         
         // 获取最后更新时间
         const timestamp = Utils.storage.get(AppConfig.STORAGE_KEYS.TIMESTAMP);
         const lastUpdate = timestamp ? this.formatRelativeTime(timestamp) : '今日';
-
-        document.getElementById('totalProvinces').textContent = totalProvinces;
+        
+        // 更新标签文本
+        const regionLabel = this.currentTab === 'foreign' ? '国家' : 
+                           this.currentTab === 'all' ? '地区' : '省份';
+        
+        document.getElementById('totalProvinces').textContent = totalRegions;
         document.getElementById('totalCities').textContent = totalCities;
         document.getElementById('totalPlaces').textContent = totalPlaces;
         document.getElementById('lastUpdate').textContent = lastUpdate;
+        document.getElementById('provincesLabel').textContent = regionLabel;
     }
 
     // 使用工具函数保存数据
@@ -568,7 +649,7 @@ class TravelRecordApp {
         }
         
         this.currentData.provinces = provinces;
-        this.renderProvinces();
+        this.renderContent();
         this.showMessage(AppConfig.MESSAGES.SORT_SUCCESS, 'success');
     }
     
@@ -611,7 +692,7 @@ class TravelRecordApp {
                 if (confirm('导入数据将覆盖现有数据，确定要继续吗？')) {
                     this.currentData = importedData;
                     this.saveToLocalStorage();
-                    this.renderProvinces();
+                    this.renderContent();
                     this.updateStats();
                     this.showMessage(AppConfig.MESSAGES.IMPORT_SUCCESS, 'success');
                 }
@@ -623,11 +704,38 @@ class TravelRecordApp {
         reader.readAsText(file);
     }
     
+    // 显示地区筛选菜单
+    showRegionFilter() {
+        const options = [
+            { text: '显示国内旅行', value: 'domestic' },
+            { text: '显示国外旅行', value: 'foreign' },
+            { text: '显示全部旅行', value: 'all' }
+        ];
+        
+        const selected = prompt('选择显示内容:\n' + 
+            options.map((opt, index) => `${index + 1}. ${opt.text}`).join('\n'));
+        
+        if (selected && selected >= 1 && selected <= options.length) {
+            this.switchTab(options[selected - 1].value);
+        }
+    }
+    
     // 编辑记录
     editRecord() {
         if (!this.currentDetailRecord) return;
         
         const { province, city } = this.currentDetailRecord;
+        
+        // 先切换到对应的标签页
+        const isDomestic = this.currentData.domestic.provinces.some(p => p.name === province.name);
+        if (isDomestic && this.currentTab === 'foreign') {
+            this.switchTab('domestic');
+        } else if (!isDomestic && this.currentTab === 'domestic') {
+            this.switchTab('foreign');
+        }
+        
+        // 更新地区选择器
+        this.populateRegionSelect();
         
         // 填充编辑表单
         document.getElementById('provinceSelect').value = province.name;

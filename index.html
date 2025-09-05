@@ -45,11 +45,26 @@
             </button>
         </header>
 
+        <!-- 标签页切换 -->
+        <div class="tab-container">
+            <div class="tab-buttons">
+                <button class="tab-btn active" data-tab="domestic">
+                    <i class="fas fa-flag"></i> 国内旅行
+                </button>
+                <button class="tab-btn" data-tab="foreign">
+                    <i class="fas fa-globe"></i> 国外旅行
+                </button>
+                <button class="tab-btn" data-tab="all">
+                    <i class="fas fa-map-marked-alt"></i> 全部
+                </button>
+            </div>
+        </div>
+
         <!-- 统计信息 -->
         <div class="stats-container">
-            <div class="stat-item" title="已访问的省份数量">
+            <div class="stat-item" title="已访问的省份/国家数量">
                 <span class="stat-number" id="totalProvinces">0</span>
-                <span class="stat-label"><i class="fas fa-map"></i> 省份</span>
+                <span class="stat-label"><i class="fas fa-map"></i> <span id="provincesLabel">省份</span></span>
             </div>
             <div class="stat-item" title="已访问的城市数量">
                 <span class="stat-number" id="totalCities">0</span>
@@ -75,6 +90,9 @@
                 </button>
             </div>
             <div class="filter-container">
+                <button class="filter-btn" id="regionFilterBtn" title="地区筛选">
+                    <i class="fas fa-filter"></i> 筛选
+                </button>
                 <button class="filter-btn" id="sortBtn" title="排序方式">
                     <i class="fas fa-sort"></i> 排序
                 </button>

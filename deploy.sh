@@ -21,6 +21,7 @@ fi
 echo "📁 添加文件到Git..."
 git add .
 
+
 # 提交更改
 echo "💾 提交更改..."
 read -p "请输入提交消息 (默认: 更新旅行记录应用): " commit_message
