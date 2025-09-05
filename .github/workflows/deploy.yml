@@ -1,0 +1,62 @@
+name: 部署到GitHub Pages
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    
+    steps:
+    - name: 检出代码
+      uses: actions/checkout@v3
+      
+    - name: 设置Node.js
+      uses: actions/setup-node@v3
+      with:
+        node-version: '18'
+        
+    - name: 安装依赖
+      run: |
+        if [ -f package.json ]; then
+          npm ci
+        else
+          echo "无需安装依赖"
+        fi
+        
+    - name: 运行测试
+      run: |
+        echo "运行基本检查..."
+        # 检查HTML文件是否存在
+        if [ ! -f index.html ]; then
+          echo "错误: index.html 文件不存在"
+          exit 1
+        fi
+        echo "✅ HTML文件检查通过"
+        
+        # 检查CSS文件是否存在
+        if [ ! -f css/style.css ]; then
+          echo "错误: CSS文件不存在"
+          exit 1
+        fi
+        echo "✅ CSS文件检查通过"
+        
+        # 检查JS文件是否存在
+        if [ ! -f js/app.js ]; then
+          echo "错误: JavaScript文件不存在"
+          exit 1
+        fi
+        echo "✅ JavaScript文件检查通过"
+        
+        echo "🎉 所有检查通过！"
+        
+    - name: 部署到GitHub Pages
+      uses: peaceiris/actions-gh-pages@v3
+      if: github.ref == 'refs/heads/main'
+      with:
+        github_token: ${{ secrets.GITHUB_TOKEN }}
+        publish_dir: ./
+        exclude_assets: '.github,node_modules,*.md,deploy.sh'
