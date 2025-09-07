@@ -39,13 +39,20 @@
     <div class="app-container">
         <!-- 头部 -->
         <header class="header">
+            <div class="header-left">
+                <button class="theme-toggle" id="themeToggle" title="切换主题">
+                    <i class="fas fa-moon" id="themeIcon"></i>
+                </button>
+            </div>
             <h1>
                 <i class="fas fa-map-marked-alt"></i> 我的旅行战绩
                 <span class="env-indicator" id="envIndicator"></span>
             </h1>
-            <button class="add-btn" id="addBtn">
-                <i class="fas fa-plus"></i> 添加记录
-            </button>
+            <div class="header-right">
+                <button class="add-btn" id="addBtn">
+                    <i class="fas fa-plus"></i> 添加记录
+                </button>
+            </div>
         </header>
 
         <!-- 标签页切换 -->

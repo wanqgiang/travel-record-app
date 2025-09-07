@@ -14,6 +14,7 @@ class TravelRecordApp {
     init() {
         this.bindEvents();
         this.setupEnvironmentIndicator();
+        this.initTheme();
         this.renderContent();
         this.updateStats();
         this.populateRegionSelect();
@@ -100,6 +101,11 @@ class TravelRecordApp {
         
         document.getElementById('fileInput').addEventListener('change', (e) => {
             this.importData(e.target.files[0]);
+        });
+        
+        // 主题切换功能
+        document.getElementById('themeToggle').addEventListener('click', () => {
+            this.toggleTheme();
         });
 
         // 点击模态框外部关闭（优化版）
@@ -797,6 +803,130 @@ class TravelRecordApp {
             indicator.title = '生产环境，不显示测试数据';
         }
     }
+    
+    // 初始化主题
+    initTheme() {
+        // 从本地存储获取主题偏好
+        const savedTheme = Utils.storage.get('theme');
+        
+        // 检测系统主题偏好
+        const systemPrefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
+        
+        // 决定使用的主题
+        const theme = savedTheme || (systemPrefersDark ? 'dark' : 'light');
+        
+        this.setTheme(theme);
+        
+        // 监听系统主题变化
+        window.matchMedia('(prefers-color-scheme: dark)').addEventListener('change', (e) => {
+            if (!Utils.storage.get('theme')) { // 只有在用户没有手动设置时才自动切换
+                this.setTheme(e.matches ? 'dark' : 'light');
+            }
+        });
+    }
+    
+    // 设置主题
+    setTheme(theme) {
+        document.documentElement.setAttribute('data-theme', theme);
+        
+        const themeIcon = document.getElementById('themeIcon');
+        const themeToggle = document.getElementById('themeToggle');
+        
+        if (theme === 'dark') {
+            themeIcon.className = 'fas fa-sun';
+            themeToggle.title = '切换到浅色模式';
+        } else {
+            themeIcon.className = 'fas fa-moon';
+            themeToggle.title = '切换到深色模式';
+        }
+        
+        this.currentTheme = theme;
+    }
+    
+    // 切换主题
+    toggleTheme() {
+        const newTheme = this.currentTheme === 'light' ? 'dark' : 'light';
+        
+        // 添加切换动画
+        const themeToggle = document.getElementById('themeToggle');
+        themeToggle.classList.add('switching');
+        
+        setTimeout(() => {
+            this.setTheme(newTheme);
+            // 保存用户偏好
+            Utils.storage.set('theme', newTheme);
+            
+            // 移除动画类
+            setTimeout(() => {
+                themeToggle.classList.remove('switching');
+            }, 150);
+        }, 150);
+        
+        // 显示切换成功消息
+        this.showMessage(`已切换到${newTheme === 'dark' ? '深色' : '浅色'}模式`, 'success');
+    }
+    
+    // 初始化主题
+    initTheme() {
+        // 从本地存储获取主题偏好
+        const savedTheme = Utils.storage.get('theme');
+        
+        // 检测系统主题偏好
+        const systemPrefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
+        
+        // 决定使用的主题
+        const theme = savedTheme || (systemPrefersDark ? 'dark' : 'light');
+        
+        this.setTheme(theme);
+        
+        // 监听系统主题变化
+        window.matchMedia('(prefers-color-scheme: dark)').addEventListener('change', (e) => {
+            if (!Utils.storage.get('theme')) { // 只有在用户没有手动设置时才自动切换
+                this.setTheme(e.matches ? 'dark' : 'light');
+            }
+        });
+    }
+    
+    // 设置主题
+    setTheme(theme) {
+        document.documentElement.setAttribute('data-theme', theme);
+        
+        const themeIcon = document.getElementById('themeIcon');
+        const themeToggle = document.getElementById('themeToggle');
+        
+        if (theme === 'dark') {
+            themeIcon.className = 'fas fa-sun';
+            themeToggle.title = '切换到浅色模式';
+        } else {
+            themeIcon.className = 'fas fa-moon';
+            themeToggle.title = '切换到深色模式';
+        }
+        
+        this.currentTheme = theme;
+    }
+    
+    // 切换主题
+    toggleTheme() {
+        const newTheme = this.currentTheme === 'light' ? 'dark' : 'light';
+        
+        // 添加切换动画
+        const themeToggle = document.getElementById('themeToggle');
+        themeToggle.classList.add('switching');
+        
+        setTimeout(() => {
+            this.setTheme(newTheme);
+            // 保存用户偏好
+            Utils.storage.set('theme', newTheme);
+            
+            // 移除动画类
+            setTimeout(() => {
+                themeToggle.classList.remove('switching');
+            }, 150);
+        }, 150);
+        
+        // 显示切换成功消息
+        this.showMessage(`已切换到${newTheme === 'dark' ? '深色' : '浅色'}模式`, 'success');
+    }
 }
 
 // 页面加载完成后初始化应用
@@ -821,14 +951,15 @@ style.textContent = `
     .detail-section {
         margin-bottom: 20px;
         padding: 15px;
-        background: #f8f9fa;
+        background: var(--bg-primary);
         border-radius: 8px;
-        border-left: 4px solid #667eea;
+        border-left: 4px solid var(--primary-color);
+        border: 1px solid var(--border-color);
     }
     
     .detail-section h4 {
         margin-bottom: 10px;
-        color: #667eea;
+        color: var(--primary-color);
         font-size: 16px;
     }
     
@@ -842,7 +973,7 @@ style.textContent = `
     }
     
     .detail-section strong {
-        color: #333;
+        color: var(--text-primary);
     }
     
     .other-places {
@@ -853,8 +984,8 @@ style.textContent = `
     }
     
     .place-tag {
-        background: #667eea;
-        color: white;
+        background: var(--primary-color);
+        color: var(--text-inverse);
         padding: 4px 8px;
         border-radius: 12px;
         font-size: 12px;
@@ -867,16 +998,21 @@ style.textContent = `
     }
     
     .city-info small {
-        color: #666;
+        color: var(--text-secondary);
         font-size: 12px;
     }
     
     .success-message.error {
-        background: #dc3545;
+        background: var(--error-color);
     }
     
     .success-message.info {
-        background: #17a2b8;
+        background: var(--info-color);
+    }
+    
+    .success-message.warning {
+        background: var(--warning-color);
+        color: var(--text-inverse);
     }
 `;
 
