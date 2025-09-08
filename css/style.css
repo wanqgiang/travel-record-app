@@ -928,6 +928,8 @@ body {
     padding: 20px;
     box-sizing: border-box;
     overflow-y: auto;
+    overflow-x: hidden;
+    touch-action: pan-y;
 }
 
 .modal[style*="block"] {
@@ -945,10 +947,12 @@ body {
     max-width: 500px;
     max-height: calc(100vh - 40px);
     overflow-y: auto;
+    overflow-x: hidden;
     box-shadow: 0 10px 30px rgba(0,0,0,0.3);
     animation: modalSlideIn 0.3s ease;
     cursor: default;
     position: relative;
+    touch-action: pan-y;
 }
 
 @keyframes modalSlideIn {

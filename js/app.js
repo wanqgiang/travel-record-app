@@ -369,6 +369,11 @@ class TravelRecordApp {
         this.populateRegionSelect();
         document.getElementById('addModal').style.display = 'block';
         document.body.style.overflow = 'hidden';
+        this.resetForm();
+        // 重新绑定照片管理事件（确保DOM已准备好）
+        setTimeout(() => {
+            this.setupPhotoManagement();
+        }, 100);
     }
 
     // 隐藏添加记录模态框
@@ -995,16 +1000,31 @@ class TravelRecordApp {
         const cameraBtn = document.getElementById('cameraBtn');
         const cameraInput = document.getElementById('cameraCapture');
         
+        console.log('设置照片管理功能:', { galleryBtn, cameraBtn, fileInput, cameraInput });
+        
         if (galleryBtn) {
-            galleryBtn.addEventListener('click', (e) => {
+            // 移除之前的事件监听器（避免重复绑定）
+            galleryBtn.removeEventListener('click', this.handleGalleryClick);
+            this.handleGalleryClick = (e) => {
                 e.stopPropagation();
-                fileInput.click();
-            });
+                e.preventDefault();
+                console.log('相册按钮被点击');
+                if (fileInput) {
+                    fileInput.click();
+                } else {
+                    console.error('文件输入元素未找到');
+                }
+            };
+            galleryBtn.addEventListener('click', this.handleGalleryClick);
         }
         
         if (cameraBtn) {
-            cameraBtn.addEventListener('click', (e) => {
+            // 移除之前的事件监听器（避免重复绑定）
+            cameraBtn.removeEventListener('click', this.handleCameraClick);
+            this.handleCameraClick = (e) => {
                 e.stopPropagation();
+                e.preventDefault();
+                console.log('拍照按钮被点击');
                 // 检测是否为移动设备
                 const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent) ||
                                (navigator.maxTouchPoints && navigator.maxTouchPoints > 2 && /MacIntel/.test(navigator.platform));
@@ -1016,7 +1036,8 @@ class TravelRecordApp {
                     fileInput.click(); // 桌面设备使用文件选择
                     this.showMessage('桌面端请使用相册选择功能', 'info');
                 }
-            });
+            };
+            cameraBtn.addEventListener('click', this.handleCameraClick);
         }
         
         // 文件选择事件
