@@ -8,6 +8,7 @@ class TravelRecordApp {
         this.searchTimeout = null;
         this.currentTab = 'domestic'; // 当前标签页：domestic, foreign, all
         this.preferences = Utils.storage.get(AppConfig.STORAGE_KEYS.USER_PREFERENCES, AppConfig.DEFAULT_PREFERENCES);
+        this.uploadedPhotos = []; // 当前上传的照片
         this.init();
     }
 
@@ -74,7 +75,7 @@ class TravelRecordApp {
         document.getElementById('closeDetailBtn').addEventListener('click', () => {
             this.hideDetailModal();
         });
-        
+
         // 标签页切换
         document.querySelectorAll('.tab-btn').forEach(btn => {
             btn.addEventListener('click', (e) => {
@@ -107,6 +108,9 @@ class TravelRecordApp {
         document.getElementById('themeToggle').addEventListener('click', () => {
             this.toggleTheme();
         });
+        
+        // 照片管理功能
+        this.setupPhotoManagement();
 
         // 点击模态框外部关闭（优化版）
         document.addEventListener('click', (e) => {
@@ -207,11 +211,11 @@ class TravelRecordApp {
                 (this.currentTab === 'all' && !this.currentData.domestic.provinces.includes(region)) ? '城' : '城';
             
             regionDiv.innerHTML = `
-                <div class="province-header" onclick="app.toggleProvince(${index})">
+                    <div class="province-header" onclick="app.toggleProvince(${index})">
                     <span class="province-name">${this.escapeHtml(region.name)}</span>
                     <span class="province-count">${cityCount}${regionLabel} ${totalPlaces}景</span>
-                </div>
-                <div class="province-content" id="province-${index}">
+                    </div>
+                    <div class="province-content" id="province-${index}">
                     ${this.renderCities(region.cities, index)}
                 </div>
             `;
@@ -225,7 +229,7 @@ class TravelRecordApp {
         // 添加城市展开/收起事件
         this.bindCityEvents();
     }
-    
+
     // 兼容性方法（保持旧代码正常工作）
     renderProvinces() {
         this.renderContent();
@@ -240,11 +244,11 @@ class TravelRecordApp {
             return `
                 <div class="city-item">
                     <div class="city-header" onclick="app.toggleCity(${provinceIndex}, ${cityIndex})">
-                        <div class="city-name">
+                    <div class="city-name">
                             <span>${this.escapeHtml(city.name)}</span>
-                            <div class="city-info">
-                                <small>访问时间: ${visitDate}</small>
-                                <small>景点数量: ${placeCount}</small>
+                    <div class="city-info">
+                        <small>访问时间: ${visitDate}</small>
+                        <small>景点数量: ${placeCount}</small>
                             </div>
                         </div>
                         <div class="expand-btn">
@@ -252,11 +256,24 @@ class TravelRecordApp {
                         </div>
                     </div>
                     <div class="places-list" id="places-${provinceIndex}-${cityIndex}" style="display: none;">
-                        ${city.places.map((place, placeIndex) => `
-                            <div class="place-item" onclick="app.showPlaceDetail(${provinceIndex}, ${cityIndex}, ${placeIndex})" title="点击查看详情">
-                                ${this.escapeHtml(place)}
+                        ${city.places.map((place, placeIndex) => {
+                            const placeName = typeof place === 'object' ? place.name : place;
+                            const placePhotos = typeof place === 'object' ? place.photos : null;
+                            const hasPhotos = placePhotos && placePhotos.length > 0;
+                            
+                            return `
+                                <div class="place-item" onclick="app.showPlaceDetail(${provinceIndex}, ${cityIndex}, ${placeIndex})" title="点击查看详情">
+                                    ${hasPhotos ? `
+                                        <div class="place-photo-thumb">
+                                            <img src="${placePhotos[0].dataUrl}" alt="${this.escapeHtml(placeName)}" class="place-thumb-img">
+                                            ${placePhotos.length > 1 ? `<span class="photo-count-badge">${placePhotos.length}</span>` : ''}
                             </div>
-                        `).join('')}
+                                    ` : ''}
+                                    <span class="place-name">${this.escapeHtml(placeName)}</span>
+                                    ${hasPhotos ? '<i class="fas fa-camera place-photo-icon"></i>' : ''}
+                                </div>
+                            `;
+                        }).join('')}
                     </div>
                 </div>
             `;
@@ -435,20 +452,58 @@ class TravelRecordApp {
         // 检查城市是否已存在
         const cityIndex = targetData[targetKey][regionIndex].cities.findIndex(c => c.name === city);
         
+        // 处理景点数据（支持照片）
+        const placesWithPhotos = places.split(',').map((p, index) => {
+            const placeName = p.trim();
+            if (!placeName) return null;
+            
+            // 如果有上传的照片，关联到景点
+            const placePhotos = this.uploadedPhotos.filter(photo => 
+                photo.name.toLowerCase().includes(placeName.toLowerCase()) ||
+                index < this.uploadedPhotos.length
+            );
+            
+            return {
+                name: placeName,
+                photos: placePhotos.length > 0 ? placePhotos : undefined
+            };
+        }).filter(Boolean);
+        
         if (cityIndex === -1) {
             // 创建新城市
             targetData[targetKey][regionIndex].cities.push({
                 name: city,
-                places: places.split(',').map(p => p.trim()).filter(p => p),
+                places: placesWithPhotos,
                 visitDate: visitDate,
-                notes: notes
+                notes: notes,
+                photos: this.uploadedPhotos // 城市级别的照片
             });
         } else {
             // 更新现有城市
             const existingCity = targetData[targetKey][regionIndex].cities[cityIndex];
-            existingCity.places = [...new Set([...existingCity.places, ...places.split(',').map(p => p.trim()).filter(p => p)])];
+            
+            // 合并景点数据
+            const existingPlaceNames = existingCity.places.map(p => 
+                typeof p === 'object' ? p.name : p
+            );
+            const newPlaceNames = placesWithPhotos.map(p => p.name);
+            
+            // 去重合并
+            const allPlaces = [...existingCity.places];
+            placesWithPhotos.forEach(newPlace => {
+                if (!existingPlaceNames.includes(newPlace.name)) {
+                    allPlaces.push(newPlace);
+                }
+            });
+            
+            existingCity.places = allPlaces;
             if (visitDate) existingCity.visitDate = visitDate;
             if (notes) existingCity.notes = notes;
+            
+            // 合并照片
+            if (this.uploadedPhotos.length > 0) {
+                existingCity.photos = [...(existingCity.photos || []), ...this.uploadedPhotos];
+            }
         }
 
         // 保存到本地存储
@@ -619,7 +674,7 @@ class TravelRecordApp {
         // 使用配置中的延迟时间
         setTimeout(() => {
             if (messageDiv.parentNode) {
-                messageDiv.remove();
+            messageDiv.remove();
             }
         }, AppConfig.UI.MESSAGE_AUTO_HIDE_DELAY);
     }
@@ -926,6 +981,194 @@ class TravelRecordApp {
         
         // 显示切换成功消息
         this.showMessage(`已切换到${newTheme === 'dark' ? '深色' : '浅色'}模式`, 'success');
+    }
+    
+    // 设置照片管理功能
+    setupPhotoManagement() {
+        const uploadArea = document.getElementById('photoUploadArea');
+        const fileInput = document.getElementById('photoUpload');
+        const previewGrid = document.getElementById('photoPreviewGrid');
+        const placeholder = document.getElementById('uploadPlaceholder');
+        
+        // 相册按钮事件
+        const galleryBtn = document.getElementById('galleryBtn');
+        const cameraBtn = document.getElementById('cameraBtn');
+        const cameraInput = document.getElementById('cameraCapture');
+        
+        if (galleryBtn) {
+            galleryBtn.addEventListener('click', (e) => {
+                e.stopPropagation();
+                fileInput.click();
+            });
+        }
+        
+        if (cameraBtn) {
+            cameraBtn.addEventListener('click', (e) => {
+                e.stopPropagation();
+                // 检测是否为移动设备
+                const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent) ||
+                               (navigator.maxTouchPoints && navigator.maxTouchPoints > 2 && /MacIntel/.test(navigator.platform));
+                
+                if (isMobile && cameraInput) {
+                    cameraInput.click(); // 移动设备直接调用相机
+                    this.showMessage('正在打开相机...', 'info');
+                } else {
+                    fileInput.click(); // 桌面设备使用文件选择
+                    this.showMessage('桌面端请使用相册选择功能', 'info');
+                }
+            });
+        }
+        
+        // 文件选择事件
+        fileInput.addEventListener('change', (e) => {
+            this.handlePhotoFiles(e.target.files);
+        });
+        
+        // 相机拍照事件
+        if (cameraInput) {
+            cameraInput.addEventListener('change', (e) => {
+                this.handlePhotoFiles(e.target.files);
+            });
+        }
+        
+        // 拖拽上传事件
+        uploadArea.addEventListener('dragover', (e) => {
+            e.preventDefault();
+            uploadArea.classList.add('dragover');
+        });
+        
+        uploadArea.addEventListener('dragleave', (e) => {
+            e.preventDefault();
+            uploadArea.classList.remove('dragover');
+        });
+        
+        uploadArea.addEventListener('drop', (e) => {
+            e.preventDefault();
+            uploadArea.classList.remove('dragover');
+            this.handlePhotoFiles(e.dataTransfer.files);
+        });
+        
+        // 照片全屏浏览
+        document.getElementById('lightboxClose').addEventListener('click', () => {
+            this.closeLightbox();
+        });
+        
+        document.getElementById('photoLightbox').addEventListener('click', (e) => {
+            if (e.target.id === 'photoLightbox') {
+                this.closeLightbox();
+            }
+        });
+    }
+    
+    // 处理照片文件
+    handlePhotoFiles(files) {
+        const validFiles = Array.from(files).filter(file => {
+            // 检查文件类型
+            if (!file.type.startsWith('image/')) {
+                this.showMessage('请选择图片文件', 'error');
+                return false;
+            }
+            
+            // 检查文件大小 (5MB)
+            if (file.size > 5 * 1024 * 1024) {
+                this.showMessage(`${file.name} 超过 5MB，请压缩后上传`, 'error');
+                return false;
+            }
+            
+            return true;
+        });
+        
+        if (validFiles.length === 0) return;
+        
+        // 处理每个有效文件
+        validFiles.forEach(file => {
+            const reader = new FileReader();
+            reader.onload = (e) => {
+                const photoData = {
+                    id: Utils.generateId(),
+                    name: file.name,
+                    size: file.size,
+                    type: file.type,
+                    dataUrl: e.target.result,
+                    uploadTime: new Date().toISOString()
+                };
+                
+                this.uploadedPhotos.push(photoData);
+                this.updatePhotoPreview();
+            };
+            reader.readAsDataURL(file);
+        });
+        
+        this.showMessage(`已选择 ${validFiles.length} 张照片`, 'success');
+    }
+    
+    // 更新照片预览
+    updatePhotoPreview() {
+        const previewGrid = document.getElementById('photoPreviewGrid');
+        const placeholder = document.getElementById('uploadPlaceholder');
+        
+        if (this.uploadedPhotos.length === 0) {
+            placeholder.style.display = 'flex';
+            previewGrid.innerHTML = '';
+            return;
+        }
+        
+        placeholder.style.display = 'none';
+        
+        previewGrid.innerHTML = this.uploadedPhotos.map((photo, index) => `
+            <div class="photo-preview-item">
+                <img src="${photo.dataUrl}" alt="${photo.name}" class="photo-preview-img" 
+                     onclick="app.openLightbox('${photo.dataUrl}', '${photo.name}')">
+                <button class="photo-remove-btn" onclick="app.removePhoto(${index})">
+                    <i class="fas fa-times"></i>
+                </button>
+                ${photo.size > 1024 * 1024 ? 
+                    `<span class="photo-count-badge" title="大文件">•</span>` : ''}
+            </div>
+        `).join('');
+    }
+    
+    // 移除照片
+    removePhoto(index) {
+        this.uploadedPhotos.splice(index, 1);
+        this.updatePhotoPreview();
+        this.showMessage('照片已移除', 'info');
+    }
+    
+    // 打开照片全屏浏览
+    openLightbox(imageSrc, imageName) {
+        const lightbox = document.getElementById('photoLightbox');
+        const lightboxImg = document.getElementById('lightboxImg');
+        
+        lightboxImg.src = imageSrc;
+        lightboxImg.alt = imageName;
+        lightbox.classList.add('show');
+        
+        // 禁止页面滚动
+        document.body.style.overflow = 'hidden';
+    }
+    
+    // 关闭照片全屏浏览
+    closeLightbox() {
+        const lightbox = document.getElementById('photoLightbox');
+        lightbox.classList.remove('show');
+        
+        // 恢复页面滚动
+        document.body.style.overflow = 'auto';
+    }
+    
+    // 重置表单时清理照片
+    resetForm() {
+        document.getElementById('provinceSelect').value = '';
+        document.getElementById('cityInput').value = '';
+        document.getElementById('placesInput').value = '';
+        document.getElementById('notesInput').value = '';
+        
+        // 清理照片数据
+        this.uploadedPhotos = [];
+        this.updatePhotoPreview();
+        
+        this.setDefaultDate();
     }
 }
 

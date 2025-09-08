@@ -153,6 +153,33 @@
                         <label for="notesInput">备注：</label>
                         <textarea id="notesInput" class="form-control" placeholder="添加备注信息"></textarea>
                     </div>
+                    <div class="form-group">
+                        <label for="photoUpload">照片：</label>
+                        <div class="photo-upload-container">
+                            <div class="photo-upload-area" id="photoUploadArea">
+                                <!-- 手机相册访问 -->
+                                <input type="file" id="photoUpload" accept="image/*,image/heic,image/heif" multiple style="display: none;">
+                                <!-- 手机相机拍照 -->
+                                <input type="file" id="cameraCapture" accept="image/*" capture="environment" style="display: none;">
+                                <div class="upload-placeholder" id="uploadPlaceholder">
+                                    <i class="fas fa-camera"></i>
+                                    <p>选择照片来源</p>
+                                    <div class="photo-source-buttons">
+                                        <button type="button" class="photo-source-btn" id="galleryBtn">
+                                            <i class="fas fa-images"></i>
+                                            <span>相册</span>
+                                        </button>
+                                        <button type="button" class="photo-source-btn" id="cameraBtn">
+                                            <i class="fas fa-camera"></i>
+                                            <span>拍照</span>
+                                        </button>
+                                    </div>
+                                    <small>支持 JPG、PNG 格式，单张不超过 5MB</small>
+                                </div>
+                                <div class="photo-preview-grid" id="photoPreviewGrid"></div>
+                            </div>
+                        </div>
+                    </div>
                 </div>
                 <div class="modal-footer">
                     <button class="btn btn-secondary" id="cancelBtn">取消</button>
@@ -177,6 +204,14 @@
                     <button class="btn btn-secondary" id="closeDetailBtn">关闭</button>
                 </div>
             </div>
+        </div>
+        
+        <!-- 照片全屏浏览 -->
+        <div class="photo-lightbox" id="photoLightbox">
+            <button class="lightbox-close" id="lightboxClose">
+                <i class="fas fa-times"></i>
+            </button>
+            <img class="lightbox-img" id="lightboxImg" alt="全屏查看">
         </div>
     </div>
 
