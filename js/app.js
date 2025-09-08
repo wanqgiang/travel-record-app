@@ -16,6 +16,7 @@ class TravelRecordApp {
         this.bindEvents();
         this.setupEnvironmentIndicator();
         this.initTheme();
+        this.initVersionDisplay();
         this.renderContent();
         this.updateStats();
         this.populateRegionSelect();
@@ -862,6 +863,74 @@ class TravelRecordApp {
             indicator.className = 'env-indicator production';
             indicator.title = '生产环境，不显示测试数据';
         }
+    }
+    
+    // 初始化版本显示
+    initVersionDisplay() {
+        const versionText = document.getElementById('versionText');
+        const buildTime = document.getElementById('buildTime');
+        const versionInfo = document.getElementById('versionInfo');
+        
+        if (!versionText || !buildTime || !versionInfo) return;
+        
+        // 获取版本信息
+        const buildInfo = VersionConfig.getBuildInfo();
+        
+        // 显示版本号
+        versionText.textContent = VersionConfig.getDisplayVersion();
+        
+        // 显示构建时间
+        buildTime.textContent = buildInfo.buildTime;
+        
+        // 添加点击事件显示详细信息
+        versionInfo.addEventListener('click', () => {
+            this.showVersionDetails();
+        });
+        
+        // 添加悬停提示
+        versionInfo.title = `点击查看版本详情\n构建时间: ${buildInfo.buildTime}`;
+    }
+    
+    // 显示版本详情
+    showVersionDetails() {
+        const buildInfo = VersionConfig.getBuildInfo();
+        const versionHistory = VersionConfig.VERSION_HISTORY;
+        const currentVersion = versionHistory.find(v => v.version === VersionConfig.VERSION);
+        
+        let detailsHtml = `
+            <div class="version-details">
+                <h3>版本信息</h3>
+                <div class="version-detail-item">
+                    <strong>当前版本:</strong> ${VersionConfig.getFullVersion()}
+                </div>
+                <div class="version-detail-item">
+                    <strong>构建时间:</strong> ${buildInfo.buildTime}
+                </div>
+                <div class="version-detail-item">
+                    <strong>版本类型:</strong> ${VersionConfig.VERSION_TYPE}
+                </div>
+        `;
+        
+        if (currentVersion) {
+            detailsHtml += `
+                <div class="version-detail-item">
+                    <strong>更新内容:</strong>
+                    <ul class="version-changes">
+                        ${currentVersion.changes.map(change => `<li>${change}</li>`).join('')}
+                    </ul>
+                </div>
+            `;
+        }
+        
+        detailsHtml += `
+                <div class="version-detail-item">
+                    <strong>环境:</strong> ${AppConfig.DEVELOPMENT && AppConfig.DEVELOPMENT.IS_LOCAL ? '开发环境' : '生产环境'}
+                </div>
+            </div>
+        `;
+        
+        // 使用现有的消息系统显示版本详情
+        this.showMessage(detailsHtml, 'info', 10000);
     }
     
     // 初始化主题
